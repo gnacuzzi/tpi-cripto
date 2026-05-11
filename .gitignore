@@ -18,3 +18,7 @@ tmp/
 .DS_Store
 .vscode/
 
+# Local assistant/context files
+AGENTS.md
+PLAN.md
+skills.md
