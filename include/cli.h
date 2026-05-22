@@ -15,7 +15,6 @@ typedef struct {
     const char *secret_path;
     int k;
     int n;
-    bool n_explicit;
     const char *dir;
 } CliConfig;
 
