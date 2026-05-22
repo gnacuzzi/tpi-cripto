@@ -50,13 +50,13 @@ $(CLI_OBJ): $(SRC_DIR)/cli/parse.c include/cli.h | $(BUILD_DIR)
 $(GF257_TEST): $(TEST_DIR)/test_gf257.c $(GF257_OBJ) | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $^ -o $@
 
-$(GF257_OBJ): $(SRC_DIR)/gf257.c include/gf257.h | $(BUILD_DIR)
+$(GF257_OBJ): $(SRC_DIR)/crypto/gf257.c include/gf257.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 $(PERMUTATION_TABLE_TEST): $(TEST_DIR)/test_permutation_table.c $(PERMUTATION_TABLE_OBJ) | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $^ -o $@
 
-$(PERMUTATION_TABLE_OBJ): $(SRC_DIR)/permutation_table.c include/permutation_table.h | $(BUILD_DIR)
+$(PERMUTATION_TABLE_OBJ): $(SRC_DIR)/crypto/permutation_table.c include/permutation_table.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 $(BMP_IO_OBJ): $(SRC_DIR)/bmp/bmp_io.c include/bmp.h | $(BUILD_DIR)
