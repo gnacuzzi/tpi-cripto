@@ -6,18 +6,34 @@ BUILD_DIR := build
 SRC_DIR := src
 TEST_DIR := tests
 
+VISUALSSS := visualSSS
+CLI_OBJ := $(BUILD_DIR)/cli_parse.o
+MAIN_OBJ := $(BUILD_DIR)/main.o
 GF257_OBJ := $(BUILD_DIR)/gf257.o
-GF257_TEST := $(BUILD_DIR)/test_gf257
 PERMUTATION_TABLE_OBJ := $(BUILD_DIR)/permutation_table.o
+
+GF257_TEST := $(BUILD_DIR)/test_gf257
 PERMUTATION_TABLE_TEST := $(BUILD_DIR)/test_permutation_table
 
-.PHONY: all test clean
+.PHONY: all visualSSS test test-cli clean
 
-all: test
+all: visualSSS test
+
+visualSSS: $(MAIN_OBJ) $(CLI_OBJ)
+	$(CC) $(CFLAGS) $^ -o $@
 
 test: $(GF257_TEST) $(PERMUTATION_TABLE_TEST)
 	./$(GF257_TEST)
 	./$(PERMUTATION_TABLE_TEST)
+
+test-cli: visualSSS
+	./$(TEST_DIR)/test_cli.sh ./$(VISUALSSS)
+
+$(MAIN_OBJ): $(SRC_DIR)/main.c include/cli.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+$(CLI_OBJ): $(SRC_DIR)/cli/parse.c include/cli.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 $(GF257_TEST): $(TEST_DIR)/test_gf257.c $(GF257_OBJ) | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $^ -o $@
@@ -35,4 +51,4 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) $(VISUALSSS)
