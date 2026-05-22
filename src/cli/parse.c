@@ -288,7 +288,7 @@ int cli_parse(int argc, char **argv, CliConfig *config) {
     }
 
     if (config->k < K_MIN || config->k > K_MAX || config->k > config->n) {
-        print_error("k must be at least 2 and at most 10 and n");
+        print_error("k cannot be lesser than 2 or greter than 10 or n");
         cli_print_usage(stderr);
         return 1;
     }
