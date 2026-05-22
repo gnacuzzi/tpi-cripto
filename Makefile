@@ -29,7 +29,7 @@ all: visualSSS test
 visualSSS: $(MAIN_OBJ) $(CLI_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@
 
-test: $(GF257_TEST) $(PERMUTATION_TABLE_TEST) $(BMP_TEST) $(LSB_TEST)
+test: $(GF257_TEST) $(PERMUTATION_TABLE_TEST) $(BMP_TEST) $(LSB_TEST) test-cli
 	./$(GF257_TEST)
 	./$(PERMUTATION_TABLE_TEST)
 	./$(BMP_TEST)

@@ -61,7 +61,7 @@ static bool parse_int(const char *text, int *value) {
     if (end == text || *end != '\0') {
         return false;
     }
-    if (parsed < K_MIN || parsed > INT_MAX) {
+    if (parsed < 0 || parsed > INT_MAX) {
         return false;
     }
 
@@ -108,7 +108,7 @@ static int count_bmp_files(const char *dir_path) {
             count++;
         }
     }
-    if (!errno) {
+    if (errno != 0) {
         closedir(dir);
         print_error("cannot read directory");
         return -1;
@@ -133,6 +133,8 @@ void cli_print_usage(FILE *stream) {
 int cli_parse(int argc, char **argv, CliConfig *config) {
     int opt = 0;
     char *normalized[argc + 1];
+    bool k_seen = false;
+    bool n_seen = false;
 
     config->mode = CLI_MODE_NONE;
     config->secret_path = NULL;
@@ -151,7 +153,7 @@ int cli_parse(int argc, char **argv, CliConfig *config) {
     opterr = 0;
     optind = 1;
 
-    while ((opt = getopt_long(argc, normalized, ":drk:n:", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, normalized, ":drs:k:n:D:", long_options, NULL)) != -1) {
         switch (opt) {
         case 'd':
             if (config->mode != CLI_MODE_NONE) {
@@ -172,7 +174,7 @@ int cli_parse(int argc, char **argv, CliConfig *config) {
             break;
 
         case 's':
-            if (!config->secret_path) {
+            if (config->secret_path != NULL) {
                 print_error("duplicate -secret");
                 cli_print_usage(stderr);
                 return 1;
@@ -181,11 +183,12 @@ int cli_parse(int argc, char **argv, CliConfig *config) {
             break;
 
         case 'k':
-            if (!config->k) {
+            if (k_seen) {
                 print_error("duplicate -k");
                 cli_print_usage(stderr);
                 return 1;
             }
+            k_seen = true;
             if (!parse_int(optarg, &config->k)) {
                 print_error("invalid -k value");
                 cli_print_usage(stderr);
@@ -194,11 +197,12 @@ int cli_parse(int argc, char **argv, CliConfig *config) {
             break;
 
         case 'n':
-            if (!config->n) {
+            if (n_seen) {
                 print_error("duplicate -n");
                 cli_print_usage(stderr);
                 return 1;
             }
+            n_seen = true;
             if (!parse_int(optarg, &config->n)) {
                 print_error("invalid -n value");
                 cli_print_usage(stderr);
@@ -207,7 +211,7 @@ int cli_parse(int argc, char **argv, CliConfig *config) {
             break;
 
         case 'D':
-            if (!config->dir) {
+            if (config->dir != NULL) {
                 print_error("duplicate -dir");
                 cli_print_usage(stderr);
                 return 1;
@@ -246,7 +250,7 @@ int cli_parse(int argc, char **argv, CliConfig *config) {
         return 1;
     }
 
-    if (!config->k) {
+    if (!k_seen) {
         print_error("missing -k");
         cli_print_usage(stderr);
         return 1;
@@ -267,6 +271,12 @@ int cli_parse(int argc, char **argv, CliConfig *config) {
         return 1;
     }
 
+    if (config->k < K_MIN || config->k > K_MAX) {
+        print_error("k must be between 2 and 10");
+        cli_print_usage(stderr);
+        return 1;
+    }
+
     if (config->mode == CLI_MODE_DISTRIBUTE) {
         if (!path_exists(config->secret_path)) {
             print_error("secret file does not exist");
@@ -276,6 +286,10 @@ int cli_parse(int argc, char **argv, CliConfig *config) {
 
         if (!config->n) {
             int bmp_count = count_bmp_files(config->dir);
+            if (bmp_count < 0) {
+                cli_print_usage(stderr);
+                return 1;
+            }
             config->n = bmp_count;
         }
 
@@ -284,12 +298,12 @@ int cli_parse(int argc, char **argv, CliConfig *config) {
             cli_print_usage(stderr);
             return 1;
         }
-    }
 
-    if (config->k < K_MIN || config->k > K_MAX || config->k > config->n) {
-        print_error("k cannot be lesser than 2 or greter than 10 or n");
-        cli_print_usage(stderr);
-        return 1;
+        if (config->k > config->n) {
+            print_error("k cannot be greater than n");
+            cli_print_usage(stderr);
+            return 1;
+        }
     }
 
     return 0;
