@@ -1,6 +1,20 @@
 # visualSSS — Secreto compartido en imágenes (Wu–Lo + esteganografía)
 
-Implementación en C del esquema de Luang-Shyr Wu y Tsung-Ming Lo para el TP de Criptografía y Seguridad
+Implementación en C del esquema de Luang-Shyr Wu y Tsung-Ming Lo para el TP de Criptografía y Seguridad.
+
+## Estado del proyecto
+
+| Componente | Estado |
+|------------|--------|
+| CLI (`-d` / `-r`, validaciones) | Implementado |
+| BMP 8 bpp (lectura/escritura, metadatos) | Implementado |
+| Esteganografía LSB (embed/extract, capacidad) | Implementado |
+| Aritmética GF(257) | Implementado |
+| PRNG / tabla de permutación | Implementado |
+| Núcleo Wu–Lo (Shamir, Lagrange) | Pendiente |
+| Distribución y recuperación end-to-end | Pendiente |
+
+El ejecutable `visualSSS` parsea y valida la línea de comandos; la orquestación completa de distribución y recuperación se conectará cuando esté listo el núcleo criptográfico.
 
 ## Requisitos (Pampero / Linux)
 
@@ -12,7 +26,7 @@ Implementación en C del esquema de Luang-Shyr Wu y Tsung-Ming Lo para el TP de 
 
 ```bash
 make visualSSS   # produce ./visualSSS
-make test        # tests unitarios (GF(257), PRNG, BMP)
+make test        # tests unitarios
 make test-cli    # validación CLI
 make clean
 ```
@@ -22,6 +36,15 @@ En **Pampero**, desde el directorio del proyecto:
 ```bash
 make clean && make visualSSS && make test && make test-cli
 ```
+
+### Tests unitarios
+
+| Target | Cubre |
+|--------|-------|
+| `test_gf257` | Operaciones mod 257 (add, mul, inv, div) |
+| `test_permutation_table` | Secuencia PRNG (semillas del anexo) |
+| `test_bmp` | Offsets 54/1078, round-trip, metadatos, rechazo de formatos inválidos |
+| `test_lsb` | Ejemplo `0xD1` del enunciado, embed/extract, capacidad y validación de portadoras |
 
 ## Uso de la CLI
 
@@ -95,20 +118,74 @@ bmp_free(&img);
 
 Para tests sin disco: `bmp_read_buffer` / `bmp_write_buffer`.
 
+## Módulo de esteganografía (LSB)
+
+API en `include/stego.h`. Oculta bytes de sombra en el bit menos significativo de los píxeles de una portadora.
+
+### Algoritmo
+
+- **1 bit por píxel** de portadora (LSB replacement).
+- Bits de cada byte de sombra en orden **MSB → LSB** (bit 7 primero), según la tabla del enunciado con `0xD1`.
+- Recorrido lineal sobre el buffer de píxeles (`width × height`, bottom-up).
+
+### Capacidad
+
+```
+bytes_de_sombra   = ceil(píxeles_secreto / k)
+píxeles_mínimos   = bytes_de_sombra × 8
+```
+
+Con **k = 8**, las portadoras deben tener el mismo tamaño que el secreto. Con **k ≠ 8**, deben cumplir `width × height ≥ píxeles_mínimos` (mismas dimensiones entre portadoras).
+
+### API principal
+
+```c
+size_t shadow_len = stego_shadow_byte_count(secret_pixels, k);
+size_t required   = stego_required_carrier_pixels(secret_pixels, k);
+
+lsb_embed(&carrier, shadow_bytes, shadow_len);
+lsb_extract(&carrier, shadow_bytes, shadow_len);
+
+stego_validate_carriers_distribute(carriers, n, secret_w, secret_h, k);
+stego_validate_carriers_recover(carriers, count, k);
+```
+
+Variantes sobre buffers sintéticos: `lsb_embed_pixels` / `lsb_extract_pixels`.
+
+## Base criptográfica
+
+### GF(257) — `include/gf257.h`
+
+Operaciones enteras en **Z/257Z**: `gf257_add`, `gf257_sub`, `gf257_mul`, `gf257_div`, `gf257_inverse`, `gf257_pow`. Sin aritmética de punto flotante.
+
+### PRNG — `include/permutation_table.h`
+
+Generador compatible con el anexo *Tabla de Permutación de Implementación*:
+
+```c
+PermutationTable table;
+permutation_table_set_seed(&table, 641);
+permutation_table_fill(&table, buffer, length);
+```
+
+Se usará para calcular `Q[i] = O[i] XOR R[i]` en la distribución.
+
 ## Estructura del proyecto
 
 ```text
 include/
-  cli.h, bmp.h, gf257.h, permutation_table.h
+  cli.h, bmp.h, stego.h, gf257.h, permutation_table.h
 src/
   main.c
-  cli/              parser y validación
+  cli/              parse.c — parser y validación
   bmp/              bmp_io.c, bmp_metadata.c
+  stego/            lsb.c, stego_capacity.c
   gf257.c
   permutation_table.c
 tests/
   test_cli.sh
   test_bmp.c
+  test_lsb.c
   test_gf257.c
   test_permutation_table.c
 Makefile

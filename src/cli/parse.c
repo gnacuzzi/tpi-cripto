@@ -131,7 +131,6 @@ void cli_print_usage(FILE *stream) {
 }
 
 int cli_parse(int argc, char **argv, CliConfig *config) {
-    bool saw_dir = false;
     int opt = 0;
     char *normalized[argc + 1];
 
