@@ -15,11 +15,15 @@ BMP_IO_OBJ := $(BUILD_DIR)/bmp_io.o
 BMP_METADATA_OBJ := $(BUILD_DIR)/bmp_metadata.o
 LSB_OBJ := $(BUILD_DIR)/lsb.o
 STEGO_CAPACITY_OBJ := $(BUILD_DIR)/stego_capacity.o
+LAGRANGE_OBJ := $(BUILD_DIR)/lagrange.o
+SHAMIR_OBJ := $(BUILD_DIR)/shamir.o
 
 GF257_TEST := $(BUILD_DIR)/test_gf257
 PERMUTATION_TABLE_TEST := $(BUILD_DIR)/test_permutation_table
 BMP_TEST := $(BUILD_DIR)/test_bmp
 LSB_TEST := $(BUILD_DIR)/test_lsb
+LAGRANGE_TEST := $(BUILD_DIR)/test_lagrange
+SHAMIR_TEST := $(BUILD_DIR)/test_shamir
 DEMO_LSB_PRUEBA := $(BUILD_DIR)/demo_lsb_prueba
 
 .PHONY: all visualSSS test test-cli demo-lsb-prueba clean
@@ -29,11 +33,13 @@ all: visualSSS test
 visualSSS: $(MAIN_OBJ) $(CLI_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@
 
-test: $(GF257_TEST) $(PERMUTATION_TABLE_TEST) $(BMP_TEST) $(LSB_TEST) test-cli
+test: $(GF257_TEST) $(PERMUTATION_TABLE_TEST) $(BMP_TEST) $(LSB_TEST) $(LAGRANGE_TEST) $(SHAMIR_TEST) test-cli
 	./$(GF257_TEST)
 	./$(PERMUTATION_TABLE_TEST)
 	./$(BMP_TEST)
 	./$(LSB_TEST)
+	./$(LAGRANGE_TEST)
+	./$(SHAMIR_TEST)
 
 test-cli: visualSSS
 	./$(TEST_DIR)/test_cli.sh ./$(VISUALSSS)
@@ -59,6 +65,12 @@ $(PERMUTATION_TABLE_TEST): $(TEST_DIR)/test_permutation_table.c $(PERMUTATION_TA
 $(PERMUTATION_TABLE_OBJ): $(SRC_DIR)/crypto/permutation_table.c include/permutation_table.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
+$(LAGRANGE_OBJ): $(SRC_DIR)/crypto/lagrange.c include/lagrange.h include/gf257.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+$(SHAMIR_OBJ): $(SRC_DIR)/crypto/shamir.c include/shamir.h include/lagrange.h include/gf257.h include/permutation_table.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
 $(BMP_IO_OBJ): $(SRC_DIR)/bmp/bmp_io.c include/bmp.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
@@ -75,6 +87,12 @@ $(STEGO_CAPACITY_OBJ): $(SRC_DIR)/stego/stego_capacity.c include/stego.h | $(BUI
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 $(LSB_TEST): $(TEST_DIR)/test_lsb.c $(LSB_OBJ) $(STEGO_CAPACITY_OBJ) $(BMP_IO_OBJ) $(BMP_METADATA_OBJ) | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $^ -o $@
+
+$(LAGRANGE_TEST): $(TEST_DIR)/test_lagrange.c $(LAGRANGE_OBJ) $(GF257_OBJ) | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $^ -o $@
+
+$(SHAMIR_TEST): $(TEST_DIR)/test_shamir.c $(SHAMIR_OBJ) $(LAGRANGE_OBJ) $(GF257_OBJ) $(PERMUTATION_TABLE_OBJ) | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $^ -o $@
 
 $(DEMO_LSB_PRUEBA): $(TEST_DIR)/demo_lsb_prueba.c $(LSB_OBJ) $(STEGO_CAPACITY_OBJ) $(BMP_IO_OBJ) $(BMP_METADATA_OBJ) | $(BUILD_DIR)
