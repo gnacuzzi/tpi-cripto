@@ -1,4 +1,4 @@
-#include "gf257.h"
+#include "../../include/gf257.h"
 
 uint16_t inverse_matrix[256] = {
     0,   1,   0, 171,   0, 205,   0, 183,   0,  57,   0, 163,   0, 197,   0, 239,   0, 241,   0,  27,   0,  61,   0, 167,   0,  41,   0,  19,   0,  53,   0, 223,
@@ -53,7 +53,7 @@ bool gf257_inverse(uint16_t value, uint16_t *out) {
     if (!out) {
         return false;
     }
-    uint16_t aux = value % 256;
+    uint16_t aux = value % GF257_MODULUS;
     if(inverse_matrix[aux]){
         *out = inverse_matrix[aux];
         return true;
