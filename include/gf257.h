@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define GF257_MODULUS 257u
+#define GF257_MODULUS 256u
 
 uint16_t gf257_normalize(int64_t value);
 uint16_t gf257_add(uint16_t a, uint16_t b);
