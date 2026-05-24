@@ -1,3 +1,4 @@
+#include "app.h"
 #include "cli.h"
 
 #include <stdio.h>
@@ -9,6 +10,5 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    (void)config;
-    return 0;
+    return app_run(&config);
 }

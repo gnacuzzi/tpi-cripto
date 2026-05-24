@@ -11,10 +11,10 @@ Implementación en C del esquema de Luang-Shyr Wu y Tsung-Ming Lo para el TP de 
 | Esteganografía LSB (embed/extract, capacidad) | Implementado |
 | Aritmética GF(257) | Implementado |
 | PRNG / tabla de permutación | Implementado |
-| Núcleo Wu–Lo (Shamir, Lagrange) | Pendiente |
-| Distribución y recuperación end-to-end | Pendiente |
+| Núcleo Wu–Lo (Shamir, Lagrange) | Implementado |
+| Distribución y recuperación end-to-end | Implementado para k = 8 |
 
-El ejecutable `visualSSS` parsea y valida la línea de comandos; la orquestación completa de distribución y recuperación se conectará cuando esté listo el núcleo criptográfico.
+El ejecutable `visualSSS` distribuye y recupera BMP reales para `k = 8`. El criterio de capacidad para `k != 8` está implementado en módulos, pero todavía no está conectado end-to-end en la CLI.
 
 ## Requisitos (Pampero / Linux)
 

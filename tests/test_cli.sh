@@ -49,7 +49,8 @@ assert_stderr_contains() {
 }
 
 touch "$TMP_DIR/secret.bmp"
-touch "$TMP_DIR/c1.bmp" "$TMP_DIR/c2.bmp" "$TMP_DIR/c3.bmp"
+touch "$TMP_DIR/c1.bmp" "$TMP_DIR/c2.bmp" "$TMP_DIR/c3.bmp" "$TMP_DIR/c4.bmp"
+touch "$TMP_DIR/c5.bmp" "$TMP_DIR/c6.bmp" "$TMP_DIR/c7.bmp" "$TMP_DIR/c8.bmp"
 
 assert_fails "no args" "$BIN"
 assert_stderr_contains "no args shows usage" "usage:" "$BIN"
@@ -69,14 +70,10 @@ assert_stderr_contains "k=11 rejected" "k must be between 2 and 10" \
 assert_stderr_contains "k greater than n" "k cannot be greater than n" \
     "$BIN" -d -secret "$TMP_DIR/secret.bmp" -k 5 -n 3 -dir "$TMP_DIR"
 
-assert_ok "enunciado distribute example" \
-    "$BIN" -d -secret "$TMP_DIR/secret.bmp" -k 2 -n 4 -dir "$TMP_DIR"
-assert_ok "enunciado distribute k=3 cwd" \
-    "$BIN" -d -secret "$TMP_DIR/secret.bmp" -k 3 -dir "$TMP_DIR"
-assert_ok "enunciado recover example" \
-    "$BIN" -r -secret "$TMP_DIR/out.bmp" -k 2 -dir "$TMP_DIR"
-assert_ok "enunciado recover k=3 cwd" \
-    "$BIN" -r -secret "$TMP_DIR/out.bmp" -k 3 -dir "$TMP_DIR"
+assert_stderr_contains "distribute invalid BMP reaches app" "invalid or corrupt BMP" \
+    "$BIN" -d -secret "$TMP_DIR/secret.bmp" -k 8 -n 8 -dir "$TMP_DIR"
+assert_stderr_contains "recover invalid BMP reaches app" "invalid or corrupt BMP" \
+    "$BIN" -r -secret "$TMP_DIR/out.bmp" -k 8 -dir "$TMP_DIR"
 
 echo "CLI tests: $pass passed, $fail failed"
 if [ "$fail" -ne 0 ]; then
