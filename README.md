@@ -12,9 +12,9 @@ Implementación en C del esquema de Luang-Shyr Wu y Tsung-Ming Lo para el TP de 
 | Aritmética GF(257) | Implementado |
 | PRNG / tabla de permutación | Implementado |
 | Núcleo Wu–Lo (Shamir, Lagrange) | Implementado |
-| Distribución y recuperación end-to-end | Implementado para k = 8 |
+| Distribución y recuperación end-to-end | Implementado para k = 2..10 |
 
-El ejecutable `visualSSS` distribuye y recupera BMP reales para `k = 8`. El criterio de capacidad para `k != 8` está implementado en módulos, pero todavía no está conectado end-to-end en la CLI.
+El ejecutable `visualSSS` distribuye y recupera BMP reales para todos los valores de `k` aceptados por la consigna (`2..10`). Para `k = 8`, las portadoras deben tener el mismo tamaño que el secreto. Para `k != 8`, se usa el criterio de capacidad LSB documentado abajo y se guardan las dimensiones originales del secreto en los metadatos de las sombras.
 
 ## Requisitos (Pampero / Linux)
 

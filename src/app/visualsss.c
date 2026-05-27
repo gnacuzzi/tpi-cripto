@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -73,6 +74,20 @@ static int same_path_text(const char *a, const char *b) {
     return a != NULL && b != NULL && strcmp(a, b) == 0;
 }
 
+static int same_existing_file(const char *a, const char *b) {
+    struct stat stat_a;
+    struct stat stat_b;
+
+    if (a == NULL || b == NULL) {
+        return 0;
+    }
+    if (stat(a, &stat_a) == 0 && stat(b, &stat_b) == 0) {
+        return stat_a.st_dev == stat_b.st_dev && stat_a.st_ino == stat_b.st_ino;
+    }
+
+    return same_path_text(a, b);
+}
+
 static int list_bmp_paths(const char *dir_path, const char *exclude_path, PathList *out) {
     memset(out, 0, sizeof(*out));
 
@@ -99,7 +114,7 @@ static int list_bmp_paths(const char *dir_path, const char *exclude_path, PathLi
             return 0;
         }
 
-        if (same_path_text(path, exclude_path)) {
+        if (same_existing_file(path, exclude_path)) {
             free(path);
             continue;
         }
@@ -164,6 +179,41 @@ static uint16_t make_seed(void) {
     return (uint16_t)(value & 0xFFFFU);
 }
 
+static uint32_t abs_height_u32(int32_t height) {
+    return (uint32_t)(height < 0 ? -height : height);
+}
+
+static void write_u32_le(uint8_t *p, uint32_t value) {
+    p[0] = (uint8_t)(value & 0xFFU);
+    p[1] = (uint8_t)((value >> 8) & 0xFFU);
+    p[2] = (uint8_t)((value >> 16) & 0xFFU);
+    p[3] = (uint8_t)((value >> 24) & 0xFFU);
+}
+
+static int bmp_prepare_secret_output(BmpImage *img, uint8_t *secret_pixels,
+                                     int32_t secret_width, int32_t secret_height) {
+    if (img == NULL || img->header == NULL || img->header_size < 54U
+        || secret_pixels == NULL || secret_width <= 0 || secret_height == 0) {
+        return 0;
+    }
+
+    img->width = secret_width;
+    img->height = secret_height;
+    free(img->pixels);
+    img->pixels = secret_pixels;
+
+    write_u32_le(img->header + 18, (uint32_t)secret_width);
+    write_u32_le(img->header + 22, (uint32_t)secret_height);
+
+    size_t pixel_data_size = bmp_row_size(secret_width) * (size_t)abs_height_u32(secret_height);
+    write_u32_le(img->header + 34, (uint32_t)pixel_data_size);
+    bmp_set_seed(img, 0);
+    bmp_set_shadow_index(img, 0);
+    bmp_set_secret_dims(img, 0, 0);
+
+    return 1;
+}
+
 static int write_images(const PathList *paths, const BmpImage *images, size_t count) {
     for (size_t i = 0; i < count; i++) {
         BmpError err = bmp_write(paths->items[i], &images[i]);
@@ -176,11 +226,6 @@ static int write_images(const PathList *paths, const BmpImage *images, size_t co
 }
 
 static int run_distribute(const CliConfig *config) {
-    if (config->k != 8) {
-        fprintf(stderr, "error: end-to-end distribution is implemented only for k=8\n");
-        return 1;
-    }
-
     BmpImage secret;
     BmpError bmp_err = bmp_read(config->secret_path, &secret);
     if (bmp_err != BMP_OK) {
@@ -255,6 +300,9 @@ static int run_distribute(const CliConfig *config) {
 
         bmp_set_seed(&carriers[i], seed);
         bmp_set_shadow_index(&carriers[i], (uint16_t)(i + 1));
+        if (config->k != 8) {
+            bmp_set_secret_dims(&carriers[i], secret.width, secret.height);
+        }
     }
 
     int ok = write_images(&paths, carriers, (size_t)config->n);
@@ -269,7 +317,7 @@ static int run_distribute(const CliConfig *config) {
 static int valid_shadow_metadata(const BmpImage *img, int k) {
     uint16_t index = bmp_get_shadow_index(img);
 
-    return k == 8 && index > 0 && index < 257U;
+    return k >= 2 && k <= 10 && index > 0 && index < 257U;
 }
 
 static int select_recovery_carriers(const BmpImage *images, size_t image_count, int k,
@@ -318,11 +366,6 @@ static int select_recovery_carriers(const BmpImage *images, size_t image_count, 
 }
 
 static int run_recover(const CliConfig *config) {
-    if (config->k != 8) {
-        fprintf(stderr, "error: end-to-end recovery is implemented only for k=8\n");
-        return 1;
-    }
-
     PathList paths;
     if (!list_bmp_paths(config->dir, NULL, &paths)) {
         return 1;
@@ -351,6 +394,19 @@ static int run_recover(const CliConfig *config) {
     }
 
     BmpImage *template = &images[selected[0]];
+    int32_t secret_width = template->width;
+    int32_t secret_height = template->height;
+    if (config->k != 8) {
+        secret_width = bmp_get_secret_width(template);
+        secret_height = bmp_get_secret_height(template);
+        if (secret_width <= 0 || secret_height == 0) {
+            fprintf(stderr, "error: missing secret dimensions in shadow metadata\n");
+            free_images(images, paths.count);
+            path_list_free(&paths);
+            return 1;
+        }
+    }
+
     for (int i = 1; i < config->k; i++) {
         BmpImage *current = &images[selected[i]];
         if (current->width != template->width || current->height != template->height) {
@@ -359,9 +415,17 @@ static int run_recover(const CliConfig *config) {
             path_list_free(&paths);
             return 1;
         }
+        if (config->k != 8
+            && (bmp_get_secret_width(current) != secret_width
+                || bmp_get_secret_height(current) != secret_height)) {
+            fprintf(stderr, "error: secret dimension metadata mismatch\n");
+            free_images(images, paths.count);
+            path_list_free(&paths);
+            return 1;
+        }
     }
 
-    size_t secret_len = bmp_pixel_count(template);
+    size_t secret_len = (size_t)secret_width * (size_t)abs_height_u32(secret_height);
     size_t shadow_len = shamir_shadow_byte_count(secret_len, config->k);
 
     uint8_t *selected_shadows = calloc((size_t)config->k * shadow_len, sizeof(selected_shadows[0]));
@@ -399,9 +463,15 @@ static int run_recover(const CliConfig *config) {
         return 1;
     }
 
-    memcpy(template->pixels, secret_pixels, secret_len);
-    bmp_set_seed(template, 0);
-    bmp_set_shadow_index(template, 0);
+    if (!bmp_prepare_secret_output(template, secret_pixels, secret_width, secret_height)) {
+        fprintf(stderr, "error: invalid output image dimensions\n");
+        free(selected_shadows);
+        free(secret_pixels);
+        free_images(images, paths.count);
+        path_list_free(&paths);
+        return 1;
+    }
+    secret_pixels = NULL;
 
     BmpError bmp_err = bmp_write(config->secret_path, template);
     if (bmp_err != BMP_OK) {

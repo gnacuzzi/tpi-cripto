@@ -45,7 +45,7 @@ test: $(GF257_TEST) $(PERMUTATION_TABLE_TEST) $(BMP_TEST) $(LSB_TEST) $(LAGRANGE
 	./$(E2E_TEST)
 
 test-cli: visualSSS
-	./$(TEST_DIR)/test_cli.sh ./$(VISUALSSS)
+	bash ./$(TEST_DIR)/test_cli.sh ./$(VISUALSSS)
 
 demo-lsb-prueba: $(DEMO_LSB_PRUEBA)
 	./$(DEMO_LSB_PRUEBA)
