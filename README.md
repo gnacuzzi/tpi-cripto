@@ -196,3 +196,37 @@ Makefile
 - Enunciado: `docs/Trabajo Practico de Implementacion2026_1.md`
 - Paper Wu–Lo: `docs/AMM.284-287.3025.md`
 - Tabla de permutación PRNG: `docs/Tabla de Permutacion Implementacion.md`
+
+## Recuperar el secreto de la cátedra
+
+Los archivos entregados por la cátedra están en `archivosdeprueba/` y ya son las sombras BMP necesarias para reconstruir el secreto. Es un caso de recuperación con `k = 8`, por lo que se deben usar las ocho imágenes:
+
+- `Albertssd.bmp`
+- `Alfredssd.bmp`
+- `Audreyssd.bmp`
+- `Evassd.bmp`
+- `Facundossd.bmp`
+- `Gustavossd.bmp`
+- `Jamesssd.bmp`
+- `Marilynssd.bmp`
+
+Desde la raíz del proyecto, primero compilar:
+
+```bash
+make visualSSS
+```
+
+Luego recuperar el secreto con:
+
+```bash
+./visualSSS -r -secret secreto_recuperado_catedra.bmp -k 8 -dir archivosdeprueba
+```
+
+Parámetros usados:
+
+- `-r`: modo recuperación.
+- `-secret secreto_recuperado_catedra.bmp`: archivo BMP de salida donde se guarda el secreto reconstruido.
+- `-k 8`: umbral requerido para estos archivos de prueba.
+- `-dir archivosdeprueba`: directorio donde están las sombras BMP entregadas por la cátedra.
+
+El comando genera `secreto_recuperado_catedra.bmp` en la raíz del proyecto. Conviene dejar el archivo de salida fuera de `archivosdeprueba/` para que ese directorio contenga solamente las sombras originales.

@@ -7,7 +7,6 @@ obj/
 *.a
 *.so
 *.dylib
-visualSSS
 
 # Test/output artifacts
 *.bmp.out
